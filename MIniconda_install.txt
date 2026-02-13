@@ -1,0 +1,41 @@
+#Step 1: Download Miniconda installer
+cd ~
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+
+#Step 2: Verify file (optional but recommended)
+ls -lh Miniconda3-latest-Linux-x86_64.sh
+
+#Step 3: Run the installer
+bash Miniconda3-latest-Linux-x86_64.sh
+
+#During installation:
+ #Press Enter to continue
+ #Type yes to accept license
+ #Press Enter for default install location (~/miniconda3)
+ #Type yes to initialize Miniconda
+
+#Step 4: Activate Miniconda
+source ~/.bashrc
+
+#Step 5: Confirm installation
+conda --version
+
+
+#Expected output:
+#conda 24.x.x
+
+#(Optional but Recommended) Update conda
+conda update -n base -c defaults conda -y
+
+#Test environment creation
+conda create -n test_env python=3.10 -y
+conda activate test_env
+
+#Activate your Miniconda environment
+#(Use the env where FastQC is installed)
+conda activate fastqc_env
+
+#Useful tips for your workflow
+
+#Disable auto-activation of base (clean prompt):
+conda config --set auto_activate_base false

@@ -1,0 +1,39 @@
+#1️ Activate (or create) a conda environment
+#Option A: Use an existing environment
+conda activate fastqc_env
+
+#Option B: Create a new environment (recommended for RNA-seq / ChIP-seq)
+conda create -n samtools_env python=3.10 -y
+conda activate samtools_env
+
+#2️ Install SAMtools from Bioconda
+conda install -c bioconda samtools -y
+
+#This installs:
+ #samtools
+ #htslib
+ #bcftools (dependency)
+
+#3️ Verify installation
+samtools --version
+which samtools
+
+#Common SAMtools commands (quick reference)
+#View BAM:
+samtools view file.bam
+
+#Convert SAM → BAM:
+samtools view -bS input.sam > output.bam
+
+#Sort BAM:
+samtools sort -@ 8 input.bam -o sorted.bam
+
+#Index BAM:
+samtools index sorted.bam
+
+#Stats:
+samtools flagstat sorted.bam
+
+#Pro tip for your PhD pipelines
+#Recommended combined environment:
+conda create -n rnaseq_env -c bioconda hisat2 samtools stringtie fastqc multiqc -y

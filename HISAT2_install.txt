@@ -1,0 +1,44 @@
+#1️ Activate (or create) a conda environment
+#You can install HISAT2 in your existing NGS environment or create a dedicated one.
+
+#Option A: Use existing environment
+conda activate fastqc_env
+
+#Option B: Create a new environment
+conda create -n hisat2_env python=3.10 -y
+conda activate hisat2_env
+
+#2️ Install HISAT2 (Bioconda)
+conda install -c bioconda hisat2 -y
+
+#This installs:
+#HISAT2 aligner
+
+#Required libraries
+#samtools dependency (in most cases)
+
+#3️ Verify installation
+hisat2 --version
+which hisat2
+
+#Example: Basic HISAT2 usage
+#Build index (if not already available)
+hisat2-build genome.fa hg38_index
+
+#Align paired-end RNA-seq reads
+hisat2 -p 8 -x hg38_index \
+-1 sample_R1.fastq \
+-2 sample_R2.fastq \
+-S output.sam
+
+#Convert SAM to BAM
+samtools view -@ 8 -bS output.sam | samtools sort -@ 8 -o output.sorted.bam
+samtools index output.sorted.bam
+
+#Recommended add-ons (same environment)
+conda install -c bioconda samtools stringtie -y
+
+#Pro tip for your PhD work
+ #For reproducible RNA-seq pipelines:
+ #Keep HISAT2 + SAMtools + StringTie in one conda env
+ #Document index version (hg19 / hg38)

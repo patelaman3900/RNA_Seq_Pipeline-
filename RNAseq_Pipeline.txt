@@ -1,0 +1,145 @@
+#-------------------------------------------------------RNAseq(bulk) workflow Pipeline workflow---------------------------------------------------
+# From fastqs (reads) to count matrix
+
+#!/bin/bash
+
+SECONDS=0
+
+# change working directory
+cd /mnt/d/AMAN_PhD/Script/Analysis/RNAseq_Pipeline
+
+#Best Practices
+#FastQC → Trimmomatic → FastQC → MultiQC
+ 
+# STEP 1: Run fastqc (same directory)
+fastqc demo.fastq
+
+# Using folder path 
+fastqc input_folder_path/file_name.fastq -o output_folder_path/
+
+#Run FastQC on multiple FASTQ files
+fastqc *.fastq
+
+#Paired-end FASTQ files
+fastqc sample_R1.fastq sample_R2.fastq
+
+#Specify output directory
+mkdir -p fastqc_results
+fastqc *.fastq -o fastqc_results
+
+#Use multiple CPU threads (recommended)
+fastqc *.fastq -t 8 -o fastqc_results
+
+#Run FastQC in background (long jobs)
+nohup fastqc *.fastq -t 8 -o fastqc_results &
+
+#Check status:
+jobs
+
+# run trimmomatic to trim reads with poor quality
+java -jar ~/Desktop/demo/tools/Trimmomatic-0.39/trimmomatic-0.39.jar SE -threads 4 data/demo.fastq data/demo_trimmed.fastq TRAILING:10 -phred33
+echo "Trimmomatic finished running!"
+
+trimmomatic SE -threads 4 \
+demo.fastq demo_trimmed.fastq \
+TRAILING:10 -phred33
+
+fastqc data/demo_trimmed.fastq -o data/
+
+
+# STEP 2: Run HISAT2
+ mkdir HISAT2
+# get the genome indices
+
+
+wget https://genome-idx.s3.amazonaws.com/hisat/grch38_genome.tar.gz
+
+
+#Unzip the .gz file 
+gunzip grch38_genome.tar.gz
+
+#Extract files from .tar 
+tar -xvf grch38_genome.tar
+
+# run alignment
+hisat2 -q --rna-strandness R -x HISAT2/grch38/genome -U demo_trimmed.fastq | samtools sort -o HISAT2/demo_trimmed.bam
+echo "HISAT2 finished running!"
+
+#FIXING THE ERROR
+#Deactivate everything
+conda deactivate
+
+#2️ Create a clean RNA-seq environment (do this once)
+conda create -n rnaseq_env -c conda-forge -c bioconda \
+hisat2 samtools stringtie fastqc multiqc trimmomatic ncurses -y
+
+#Why this works:
+#conda-forge provides compatible ncurses
+#All binaries link to the same libraries
+
+#3️ Activate the new environment
+conda activate rnaseq_env
+
+#4️ Verify tools (IMPORTANT)
+hisat2 --version
+samtools --version
+
+#If both print versions → environment is healthy
+
+#Now run your command (CORRECTED) # run alignment
+hisat2 -q -p 8 --rna-strandness R \
+-x /mnt/d/AMAN_PhD/Script/Analysis/RNAseq_Pipeline/HISAT2/grch38/genome \
+-U /mnt/d/AMAN_PhD/Script/Analysis/RNAseq_Pipeline/demo_trimmed.fastq | \
+samtools sort -@ 8 -o /mnt/d/AMAN_PhD/Script/Analysis/RNAseq_Pipeline/HISAT2/demo_trimmed.sorted.bam
+
+#indexing the files
+samtools index /mnt/d/AMAN_PhD/Script/Analysis/RNAseq_Pipeline/HISAT2/demo_trimmed.sorted.bam
+
+# STEP 3: Run featureCounts - Quantification
+
+
+
+# get gtf
+# wget http://ftp.ensembl.org/pub/release-106/gtf/homo_sapiens/Homo_sapiens.GRCh38.106.gtf.gz
+
+#Install Subread (provides featureCounts)
+conda install -c bioconda subread -y
+
+featureCounts -S 2 -a /mnt/d/AMAN_PhD/Script/Analysis/RNAseq_Pipeline/Homo_sapiens.GRCh38.106.gtf -o demo_featurecounts.txt /mnt/d/AMAN_PhD/Script/Analysis/RNAseq_Pipeline/HISAT2/demo_trimmed.bam
+echo "featureCounts finished running!"
+
+featureCounts -S 2 -a /mnt/d/AMAN_PhD/Script/Analysis/RNAseq_Pipeline/Homo_sapiens.GRCh38.106.gtf -o demo_featurecounts.txt HISAT2/demo_trimmed.bam
+
+
+duration=$SECONDS
+echo "$(($duration / 60)) minutes and $(($duration % 60)) seconds elapsed."
+
+cat demo_featurecounts.txt.summary
+cat demo_featurecounts.txt | less
+cat demo_featurecounts.txt | cut -f1,7 | less
+
+#DATA SOURCES
+
+#Link to code:
+ #https://github.com/kpatel427/YouTubeTutorials/blob/main/RNASeqpipeline.sh
+
+#Link to data:
+ #▸ https://drive.google.com/file/d/1DGHjbhcRy_zTm6H9C_AUpkzBML-JhtA3/view
+
+#Linux Basics
+ #▸ https://ubuntu.com/tutorials/command-line-for-beginners#1-overview
+ #▸ https://xie186.github.io/Novice2Expert4Bioinformatics/install-bioinformatics-software-in-linux.html
+ #▸ https://hackr.io/blog/basic-linux-commands
+
+#To Trim or to not Trim?
+ #▸ https://pmc.ncbi.nlm.nih.gov/articles/PMC7671312/
+
+#Strandedness
+ #▸ https://link.springer.com/article/10.1186/s12864-015-1876-7
+ #▸ https://chipster.csc.fi/manual/library-type-summary.html
+ #▸ https://rseqc.sourceforge.net/#infer-experiment-py
+
+
+
+
+#-------------------------------------------------------RNAseq(bulk) workflow Pipeline workflow---------------------------------------------------
